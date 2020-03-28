@@ -3,9 +3,9 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>Using different Transforms for train and validation sets in fastai2 | Akash Palrecha</title>
+<title>Using separate Transforms for your training and validation sets in fastai2 | Akash Palrecha</title>
 <meta name="generator" content="Jekyll v4.0.0" />
-<meta property="og:title" content="Using different Transforms for train and validation sets in fastai2" />
+<meta property="og:title" content="Using separate Transforms for your training and validation sets in fastai2" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="%config autocompleter.use_jedi = False" />
 <meta property="og:description" content="%config autocompleter.use_jedi = False" />
@@ -15,7 +15,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-03-27T00:00:00-05:00" />
 <script type="application/ld+json">
-{"datePublished":"2020-03-27T00:00:00-05:00","headline":"Using different Transforms for train and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html","dateModified":"2020-03-27T00:00:00-05:00","@context":"https://schema.org"}</script>
+{"datePublished":"2020-03-27T00:00:00-05:00","headline":"Using separate Transforms for your training and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html","dateModified":"2020-03-27T00:00:00-05:00","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://akashpalrecha.me/feed.xml" title="Akash Palrecha" /><!-- the google_analytics_id gets auto inserted from the config file -->
 
@@ -24,9 +24,9 @@
 <script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create','UA-159086131-1','auto');ga('require','displayfeatures');ga('send','pageview');</script>
 
 <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico"><!-- Begin Jekyll SEO tag v2.6.1 -->
-<title>Using different Transforms for train and validation sets in fastai2 | Akash Palrecha</title>
+<title>Using separate Transforms for your training and validation sets in fastai2 | Akash Palrecha</title>
 <meta name="generator" content="Jekyll v4.0.0" />
-<meta property="og:title" content="Using different Transforms for train and validation sets in fastai2" />
+<meta property="og:title" content="Using separate Transforms for your training and validation sets in fastai2" />
 <meta property="og:locale" content="en_US" />
 <meta name="description" content="%config autocompleter.use_jedi = False" />
 <meta property="og:description" content="%config autocompleter.use_jedi = False" />
@@ -36,7 +36,7 @@
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-03-27T00:00:00-05:00" />
 <script type="application/ld+json">
-{"datePublished":"2020-03-27T00:00:00-05:00","headline":"Using different Transforms for train and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html","dateModified":"2020-03-27T00:00:00-05:00","@context":"https://schema.org"}</script>
+{"datePublished":"2020-03-27T00:00:00-05:00","headline":"Using separate Transforms for your training and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/27/split-transform.html","dateModified":"2020-03-27T00:00:00-05:00","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 <link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
@@ -105,7 +105,7 @@ window.onload = wrap_img;
           </span>
         </label>
 
-        <div class="trigger"><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/search/">Search</a><a class="page-link" href="/categories/">Tags</a></div>
+        <div class="trigger"><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/search/">Search</a><a class="page-link" href="/categories/">Tags</a></div>
       </nav></div>
 </header>
 <main class="page-content" aria-label="Content">
@@ -113,7 +113,7 @@ window.onload = wrap_img;
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">Using different Transforms for train and validation sets in fastai2</h1><p class="post-meta post-meta-title"><time class="dt-published" datetime="2020-03-27T00:00:00-05:00" itemprop="datePublished">
+    <h1 class="post-title p-name" itemprop="name headline">Using separate `Transforms` for your training and validation sets in fastai2</h1><p class="post-meta post-meta-title"><time class="dt-published" datetime="2020-03-27T00:00:00-05:00" itemprop="datePublished">
         Mar 27, 2020
       </time>
        • <span class="read-time" title="Estimated read time">
@@ -139,9 +139,9 @@ window.onload = wrap_img;
 
   <div class="post-content e-content" itemprop="articleBody">
     <ul class="section-nav">
-<li class="toc-entry toc-h1"><a href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">Applying a Transform to specific subsets of your Dataset using fastai2’s low level APIs</a>
+<li class="toc-entry toc-h2"><a href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">Applying a Transform to specific subsets of your Dataset using fastai2’s low level APIs</a>
 <ul>
-<li class="toc-entry toc-h2"><a href="#preliminaries">Preliminaries:</a></li>
+<li class="toc-entry toc-h3"><a href="#preliminaries">Preliminaries:</a></li>
 </ul>
 </li>
 <li class="toc-entry toc-h1"><a href="#lets-begin">Let’s begin!</a></li>
@@ -154,11 +154,11 @@ window.onload = wrap_img;
 <span class="kn">from</span> <span class="nn">fastai2.vision.all</span> <span class="kn">import</span> <span class="o">*</span>
 </code></pre></div></div>
 
-<h1 id="applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">
-<a class="anchor" href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis" aria-hidden="true"><span class="octicon octicon-link"></span></a>Applying a <code class="highlighter-rouge">Transform</code> to specific subsets of your Dataset using <code class="highlighter-rouge">fastai2</code>’s low level APIs</h1>
+<h2 id="applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">
+<a class="anchor" href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis" aria-hidden="true"><span class="octicon octicon-link"></span></a>Applying a <code class="highlighter-rouge">Transform</code> to specific subsets of your Dataset using <code class="highlighter-rouge">fastai2</code>’s low level APIs</h2>
 
-<h2 id="preliminaries">
-<a class="anchor" href="#preliminaries" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preliminaries:</h2>
+<h3 id="preliminaries">
+<a class="anchor" href="#preliminaries" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preliminaries:</h3>
 
 <p><strong>What we will be discussing:</strong> We’ll learn one very specific thing about the fastai2 library: how to restrict some transforms to work only on specific subsets of your data. For example, you may want a particular image augmentation to only run on your training data and not your validation data.<br>
 <strong>What we are not going to do:</strong> We are not going to look at the source code in this blog and understand how to achieve the above objective. I’ve done all that homework so you don’t have to, and we’ll simply be looking into how we can write code to achieve this. Along the way, we’ll get some insights on why things work the way they do. I believe that digging through the source code is a great exercise in itself and I encourage you to do the same to get to the core of what we will discuss today<br>
