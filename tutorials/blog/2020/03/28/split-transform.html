@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Using different Transforms for train and validation sets in fastai2 | Akash Palrecha</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="Using different Transforms for train and validation sets in fastai2" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="%config autocompleter.use_jedi = False" />
+<meta property="og:description" content="%config autocompleter.use_jedi = False" />
+<link rel="canonical" href="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html" />
+<meta property="og:url" content="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html" />
+<meta property="og:site_name" content="Akash Palrecha" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-03-28T00:00:00-05:00" />
+<script type="application/ld+json">
+{"datePublished":"2020-03-28T00:00:00-05:00","headline":"Using different Transforms for train and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html","dateModified":"2020-03-28T00:00:00-05:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="https://akashpalrecha.me/feed.xml" title="Akash Palrecha" /><!-- the google_analytics_id gets auto inserted from the config file -->
+
+
+
+<script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create','UA-159086131-1','auto');ga('require','displayfeatures');ga('send','pageview');</script>
+
+<link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico"><!-- Begin Jekyll SEO tag v2.6.1 -->
+<title>Using different Transforms for train and validation sets in fastai2 | Akash Palrecha</title>
+<meta name="generator" content="Jekyll v4.0.0" />
+<meta property="og:title" content="Using different Transforms for train and validation sets in fastai2" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="%config autocompleter.use_jedi = False" />
+<meta property="og:description" content="%config autocompleter.use_jedi = False" />
+<link rel="canonical" href="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html" />
+<meta property="og:url" content="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html" />
+<meta property="og:site_name" content="Akash Palrecha" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-03-28T00:00:00-05:00" />
+<script type="application/ld+json">
+{"datePublished":"2020-03-28T00:00:00-05:00","headline":"Using different Transforms for train and validation sets in fastai2","description":"%config autocompleter.use_jedi = False","mainEntityOfPage":{"@type":"WebPage","@id":"https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html"},"@type":"BlogPosting","url":"https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html","dateModified":"2020-03-28T00:00:00-05:00","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+<link href="https://unpkg.com/@primer/css/dist/primer.css" rel="stylesheet" />
+<link rel="stylesheet" href="//use.fontawesome.com/releases/v5.0.7/css/all.css"><link type="application/atom+xml" rel="alternate" href="https://akashpalrecha.me/feed.xml" title="Akash Palrecha" /><!-- the google_analytics_id gets auto inserted from the config file -->
+
+
+
+<script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');ga('create','UA-159086131-1','auto');ga('require','displayfeatures');ga('send','pageview');</script>
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css" integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+    <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"> </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js" integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement( document.body, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "[%", right: "%]", display: true},
+            {left: "$", right: "$", display: false}
+        ]}
+        );
+    });
+    </script>
+
+
+<script>
+function wrap_img(fn) {
+    if (document.attachEvent ? document.readyState === "complete" : document.readyState !== "loading") {
+        var elements = document.querySelectorAll(".post img");
+        Array.prototype.forEach.call(elements, function(el, i) {
+            if (el.getAttribute("title")) {
+                const caption = document.createElement('figcaption');
+                var node = document.createTextNode(el.getAttribute("title"));
+                caption.appendChild(node);
+                const wrapper = document.createElement('figure');
+                wrapper.className = 'image';
+                el.parentNode.insertBefore(wrapper, el);
+                el.parentNode.removeChild(el);
+                wrapper.appendChild(el);
+                wrapper.appendChild(caption);
+            }
+        });
+    } else { document.addEventListener('DOMContentLoaded', fn); }
+}
+window.onload = wrap_img;
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+    // add link icon to anchor tags
+    var elem = document.querySelectorAll(".anchor-link")
+    elem.forEach(e => (e.innerHTML = '<i class="fas fa-link fa-xs"></i>'));
+    });
+</script>
+</head><body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Akash Palrecha</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/about/">About Me</a><a class="page-link" href="/search/">Search</a><a class="page-link" href="/categories/">Tags</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Using different Transforms for train and validation sets in fastai2</h1><p class="post-meta post-meta-title"><time class="dt-published" datetime="2020-03-28T00:00:00-05:00" itemprop="datePublished">
+        Mar 28, 2020
+      </time>
+       • <span class="read-time" title="Estimated read time">
+    
+    
+      18 min read
+    
+</span></p>
+
+    
+      <p class="category-tags"><i class="fas fa-tags category-tags-icon"></i></i> 
+      
+        <a class="category-tags-link" href="/categories/#tutorials">tutorials</a>
+        &nbsp;
+      
+        <a class="category-tags-link" href="/categories/#blog">blog</a>
+        
+      
+      </p>
+    
+
+    </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <ul class="section-nav">
+<li class="toc-entry toc-h1"><a href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">Applying a Transform to specific subsets of your Dataset using fastai2’s low level APIs</a>
+<ul>
+<li class="toc-entry toc-h2"><a href="#preliminaries">Preliminaries:</a></li>
+</ul>
+</li>
+<li class="toc-entry toc-h1"><a href="#lets-begin">Let’s begin!</a></li>
+<li class="toc-entry toc-h1"><a href="#a-very-short-summary">A very short summary:</a></li>
+</ul><div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">%</span><span class="n">config</span> <span class="n">autocompleter</span><span class="o">.</span><span class="n">use_jedi</span> <span class="o">=</span> <span class="bp">False</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">fastai2</span>
+<span class="kn">from</span> <span class="nn">fastai2.data.all</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">fastai2.vision.all</span> <span class="kn">import</span> <span class="o">*</span>
+</code></pre></div></div>
+
+<h1 id="applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis">
+<a class="anchor" href="#applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis" aria-hidden="true"><span class="octicon octicon-link"></span></a>Applying a <code class="highlighter-rouge">Transform</code> to specific subsets of your Dataset using <code class="highlighter-rouge">fastai2</code>’s low level APIs</h1>
+
+<h2 id="preliminaries">
+<a class="anchor" href="#preliminaries" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preliminaries:</h2>
+
+<p><strong>What we will be discussing:</strong> We’ll learn one very specific thing about the fastai2 library: how to restrict some transforms to work only on specific subsets of your data. For example, you may want a particular image augmentation to only run on your training data and not your validation data.<br>
+<strong>What we are not going to do:</strong> We are not going to look at the source code in this blog and understand how to achieve the above objective. I’ve done all that homework so you don’t have to, and we’ll simply be looking into how we can write code to achieve this. Along the way, we’ll get some insights on why things work the way they do. I believe that digging through the source code is a great exercise in itself and I encourage you to do the same to get to the core of what we will discuss today<br>
+<strong>What knowledge is assumed of the reader:</strong> This blog is meant for users who have some familiarity with how to use the <code class="highlighter-rouge">Datasets</code> functionality (and it’s relatives) in <code class="highlighter-rouge">fastai2</code>. Usually, these readers will be fairly comfortable at a high level with the <code class="highlighter-rouge">fastai2</code> library although it isn’t required. To get the necessary background, I recommend you to work through the first of the FastAI V2 walkthroughs that Jeremy Howard posted a few months ago here: <a href="https://www.youtube.com/watch?v=44pe47sB4BI">Video</a>. Some of the names of components in the library have changed since then, most notably:<br></p>
+<ol>
+  <li>DataSource -&gt; Datasets</li>
+  <li>Databunch -&gt; Dataloaders</li>
+</ol>
+
+<p>From this point onwards, I will be assuming that you have the necessary prerequisites to follow through this blog. I encourage you to spin up a Jupyter notebook and run all the code below.</p>
+
+<h1 id="lets-begin">
+<a class="anchor" href="#lets-begin" aria-hidden="true"><span class="octicon octicon-link"></span></a>Let’s begin!</h1>
+
+<p>First, we need to get some items ready to work on …</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span> <span class="o">=</span> <span class="n">untar_data</span><span class="p">(</span><span class="n">URLs</span><span class="o">.</span><span class="n">MNIST_SAMPLE</span><span class="p">)</span>
+<span class="c1"># Dataset consisting of MNIST Images of classes `3` and `7`
+</span></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">items</span> <span class="o">=</span> <span class="n">get_image_files</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">items</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:],</span> <span class="n">items</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>((#10) [Path('/Users/akash/.fastai/data/mnist_sample/train/3/10847.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/49926.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/25630.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/23241.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/24248.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/54977.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/23527.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/48386.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/28472.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/27741.png')],
+ (#10) [Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9294.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/1186.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6825.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/4767.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6170.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6164.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9257.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/4773.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/8175.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6158.png')])
+</code></pre></div></div>
+
+<p>We’ll begin by defining define some transforms for our data</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">Transform</span>
+<span class="k">def</span> <span class="nf">imopen</span><span class="p">(</span><span class="n">o</span><span class="p">:</span><span class="n">Path</span><span class="p">):</span> <span class="k">return</span> <span class="n">PILImage</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+<span class="c1"># Simply creates an Image.Image from a Path
+</span></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">img_tfms</span> <span class="o">=</span> <span class="p">[</span><span class="n">imopen</span><span class="p">,</span> <span class="n">ToTensor</span><span class="p">()]</span> <span class="c1"># Open image, convert to tensor
+</span><span class="n">cat_tfms</span> <span class="o">=</span> <span class="p">[</span><span class="n">parent_label</span><span class="p">]</span> <span class="c1"># Label each image using the parent folder name of it's path
+</span><span class="n">splitter</span> <span class="o">=</span> <span class="n">RandomSplitter</span><span class="p">()</span> <span class="c1"># Splits items randomly into train and validation set
+</span><span class="n">splits</span>   <span class="o">=</span> <span class="n">splitter</span><span class="p">(</span><span class="n">items</span><span class="p">)</span> <span class="c1"># Get split indices
+</span></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">splits</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>((#11548) [10633,2570,13625,8068,1511,12874,1824,14429,10383,5628...],
+ (#2886) [11197,954,6177,4220,2384,13223,5007,12005,11552,11120...])
+</code></pre></div></div>
+
+<p>So, here we define a <code class="highlighter-rouge">Datasets</code> object in the usual way, passing in the items and the transforms for each component of our data. We pass in <code class="highlighter-rouge">splits</code> to specify the split between training and validation sets. Or rather to be more specific, we do this to specify the <code class="highlighter-rouge">subset(0)</code> and the <code class="highlighter-rouge">subset(1)</code> of our dataset.</p>
+
+<p>What does component above mean: Let’s say each training sample of your data is of the form: (Image, label). In this case, <code class="highlighter-rouge">Image</code> is your first component, and <code class="highlighter-rouge">label</code> is your second component.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span> <span class="o">=</span> <span class="n">Datasets</span><span class="p">(</span><span class="n">items</span><span class="o">=</span><span class="n">items</span><span class="p">,</span> <span class="n">tfms</span><span class="o">=</span><span class="p">[</span><span class="n">img_tfms</span><span class="p">,</span> <span class="n">cat_tfms</span><span class="p">],</span> <span class="n">splits</span><span class="o">=</span><span class="n">splits</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Sanity checks:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="c1"># The above is the same as: ds[0], ds.subset(0)[0], ds.subset(1)[0]
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>((TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '7'),
+ (TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '3'),
+ (TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '3'))
+</code></pre></div></div>
+
+<p>Now let’s say, hypothetically, that we want to apply our <code class="highlighter-rouge">imopen</code> transform only to items in the <code class="highlighter-rouge">ds.train</code> dataset. We’ll investigate how we might go about achieving that.</p>
+
+<p>So, in <code class="highlighter-rouge">fastai2</code>, every split of your dataset is linked to a <code class="highlighter-rouge">split_idx</code>. In the above example, the <code class="highlighter-rouge">split_idx</code> for <code class="highlighter-rouge">ds.train</code> and <code class="highlighter-rouge">ds.valid</code> is <code class="highlighter-rouge">0</code> and <code class="highlighter-rouge">1</code> respectively. So, <code class="highlighter-rouge">split_idx</code> is essentially the <em>index</em> of a split in the Dataset.</p>
+
+<p>In <code class="highlighter-rouge">fastai2</code>, each Pipeline that is assigned to a split of your data has a matching <code class="highlighter-rouge">split_idx</code>. For example, here are the values for our train and validation sets in <code class="highlighter-rouge">ds</code>:</p>
+
+<p>Note: <code class="highlighter-rouge">tls[0]</code> is the Pipeline for opening our image and <code class="highlighter-rouge">tls[1]</code> is the Pipeline for setting our labels.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(0, 0)
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(1, 1)
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># For completeness' sake: each ds.tls itself has splits inside of it.
+# We can confirm this:
+</span><span class="k">assert</span> <span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">train</span> <span class="o">==</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="c1"># I prefer using ds.train.tls[0] because I believe it makes things a bit more readable
+# and so that's what we'll be using throughout the rest of the blog.
+</span></code></pre></div></div>
+
+<p>As you can see, the Pipelines are automatically assigned the appropriate <code class="highlighter-rouge">split_idx</code>s depending on what subsets of your data they’re meant for.<br>
+Now, each <code class="highlighter-rouge">Transform</code> can have a <code class="highlighter-rouge">split_idx</code> too. But how does that help?<br>
+If a <code class="highlighter-rouge">Transform</code> has a split_idx of <code class="highlighter-rouge">0</code>, it will only be active if it’s inside a Pipeline which also has a <code class="highlighter-rouge">split_idx</code> of <code class="highlighter-rouge">0</code>. So basically, the <code class="highlighter-rouge">split_idx</code>s of the Pipeline and a transform inside it need to match if the transform is to be active, otherwise, it will just pass on the input without doing any operation on it. One thing to note here is that if a <code class="highlighter-rouge">Transform</code> does not have a <code class="highlighter-rouge">split_idx</code> (i.e. <code class="highlighter-rouge">split_idx = None</code>), it will be applied to all the inputs it gets regardless of the Pipeline’s <code class="highlighter-rouge">split_idx</code></p>
+
+<p>The code examples ahead will help clarify this a bit more.<br>
+We’ll redefine everything with a few changes</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">Transform</span>
+<span class="k">def</span> <span class="nf">imopen</span><span class="p">(</span><span class="n">o</span><span class="p">:</span><span class="n">Path</span><span class="p">):</span> <span class="k">return</span> <span class="n">PILImage</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+<span class="n">imopen</span><span class="o">.</span><span class="n">split_idx</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="c1"># Now, we should expect this to work only for the training set
+</span></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">img_tfms</span> <span class="o">=</span> <span class="p">[</span><span class="n">imopen</span><span class="p">,</span> <span class="n">ToTensor</span><span class="p">()]</span> <span class="c1"># Open image, convert to tensor
+</span><span class="n">cat_tfms</span> <span class="o">=</span> <span class="p">[</span><span class="n">parent_label</span><span class="p">]</span> <span class="c1"># Label each image using the parent folder name of it's path
+</span><span class="n">splitter</span> <span class="o">=</span> <span class="n">RandomSplitter</span><span class="p">()</span> <span class="c1"># Splits items randomly into train and validation set
+</span><span class="n">splits</span>   <span class="o">=</span> <span class="n">splitter</span><span class="p">(</span><span class="n">items</span><span class="p">)</span> <span class="c1"># Get split indices
+</span></code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span> <span class="o">=</span> <span class="n">Datasets</span><span class="p">(</span><span class="n">items</span><span class="o">=</span><span class="n">items</span><span class="p">,</span> <span class="n">tfms</span><span class="o">=</span><span class="p">[</span><span class="n">img_tfms</span><span class="p">,</span> <span class="n">cat_tfms</span><span class="p">],</span> <span class="n">splits</span><span class="o">=</span><span class="n">splits</span><span class="p">,</span> <span class="n">split_idx</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>So, at this point, we have three datasets in <code class="highlighter-rouge">ds</code>:</p>
+<ol>
+  <li>
+<code class="highlighter-rouge">ds</code> : the full dataset</li>
+  <li>
+<code class="highlighter-rouge">ds.train</code> : the first split, i.e. <code class="highlighter-rouge">ds.subset(0)</code>
+</li>
+  <li>
+<code class="highlighter-rouge">ds.valid</code> : the second split, i.e. <code class="highlighter-rouge">ds.subset(1)</code>
+</li>
+</ol>
+
+<p>And for all these datasets, a separate set of <code class="highlighter-rouge">Pipelines</code> (or rather specifically, <code class="highlighter-rouge">TfmdLists</code>) has been created using the same transforms we passed above. Let’s verify that: <br>
+(we should expect each <code class="highlighter-rouge">TfmdList</code> to have two Pipelines for two of our components)</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(2, 2, 2)
+</code></pre></div></div>
+
+<p>Looking at each Pipeline in the <code class="highlighter-rouge">TfmdLists</code>:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(Pipeline: imopen -&gt; ToTensor, Pipeline: parent_label)
+</code></pre></div></div>
+
+<p>Now, here are the <code class="highlighter-rouge">split_idx</code> values for all of them:</p>
+
+<p>Note: <code class="highlighter-rouge">split_idx</code> for <code class="highlighter-rouge">ds</code> itself is what we passed in when we created the <code class="highlighter-rouge">Datasets</code> object</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(2, 0, 1)
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">split_idx</code> for each <code class="highlighter-rouge">TfmdLists</code> and for the <code class="highlighter-rouge">Pipeline</code>s contained in them for all our datasets:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span> 
+<span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2 2
+2 2
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0 0
+0 0
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tfms</span><span class="o">.</span><span class="n">split_idx</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1 1
+1 1
+</code></pre></div></div>
+
+<p>As we can see, all of the <code class="highlighter-rouge">TfmdLists</code> and <code class="highlighter-rouge">Pipeline</code>s above have been assigned the appropriate <code class="highlighter-rouge">split_idx</code> values depending on what dataset they belong to. This is as expected</p>
+
+<p>Here’s the interesting bit: we’ll now look at the <code class="highlighter-rouge">split_idx</code> values of the <code class="highlighter-rouge">imopen</code> function in each of these <code class="highlighter-rouge">TfmdLists</code>:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(imopen: (Path,object) -&gt; imopen , 0)
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(imopen: (Path,object) -&gt; imopen , 0)
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="o">.</span><span class="n">tls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">fs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(imopen: (Path,object) -&gt; imopen , 0)
+</code></pre></div></div>
+
+<p>So, regardless of what <code class="highlighter-rouge">Pipeline</code> it belongs to, the <code class="highlighter-rouge">imopen</code> function has retained it’s <code class="highlighter-rouge">split_idx</code> value. Now let’s see how it affects things going ahead. We should expect <code class="highlighter-rouge">imopen</code> to work only for our train dataset.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9294.png'), '7')
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]],
+ 
+         [[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]],
+ 
+         [[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+ '7')
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(Path('/Users/akash/.fastai/data/mnist_sample/train/7/10408.png'), '7')
+</code></pre></div></div>
+
+<p>So the code above just confirms everything we just discussed.</p>
+
+<p>Now, if we put everything into a <code class="highlighter-rouge">Dataloader</code>, we’ll get the expected errors where items from <code class="highlighter-rouge">ds</code> and <code class="highlighter-rouge">ds.valid</code> will casuse issues when being put into a batch of tensors since you can’t do that with <code class="highlighter-rouge">Path</code> objects:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">dl0</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">ds</span><span class="p">,</span> <span class="n">bs</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">dl1</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">train</span><span class="p">,</span> <span class="n">bs</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">dl2</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">ds</span><span class="o">.</span><span class="n">valid</span><span class="p">,</span> <span class="n">bs</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">dl0</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">dl1</span><span class="o">.</span><span class="n">split_idx</span><span class="p">,</span> <span class="n">dl2</span><span class="o">.</span><span class="n">split_idx</span> 
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(2, 0, 1)
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">it0</span><span class="p">,</span> <span class="n">it1</span><span class="p">,</span> <span class="n">it2</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">dl0</span><span class="p">),</span> <span class="nb">iter</span><span class="p">(</span><span class="n">dl1</span><span class="p">),</span> <span class="nb">iter</span><span class="p">(</span><span class="n">dl2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">next</span><span class="p">(</span><span class="n">it0</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>---------------------------------------------------------------------------
+
+TypeError                                 Traceback (most recent call last)
+
+&lt;ipython-input-67-6a3290243c2c&gt; in &lt;module&gt;
+----&gt; 1 next(it0)
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in __iter__(self)
+     95         self.randomize()
+     96         self.before_iter()
+---&gt; 97         for b in _loaders[self.fake_l.num_workers==0](self.fake_l):
+     98             if self.device is not None: b = to_device(b, self.device)
+     99             yield self.after_batch(b)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in __next__(self)
+    343 
+    344     def __next__(self):
+--&gt; 345         data = self._next_data()
+    346         self._num_yielded += 1
+    347         if self._dataset_kind == _DatasetKind.Iterable and \
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in _next_data(self)
+    383     def _next_data(self):
+    384         index = self._next_index()  # may raise StopIteration
+--&gt; 385         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+    386         if self._pin_memory:
+    387             data = _utils.pin_memory.pin_memory(data)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py in fetch(self, possibly_batched_index)
+     32                 raise StopIteration
+     33         else:
+---&gt; 34             data = next(self.dataset_iter)
+     35         return self.collate_fn(data)
+     36 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batches(self, samps)
+    104         self.it = iter(self.dataset) if self.dataset is not None else None
+    105         res = filter(lambda o:o is not None, map(self.do_item, samps))
+--&gt; 106         yield from map(self.do_batch, self.chunkify(res))
+    107 
+    108     def new(self, dataset=None, cls=None, **kwargs):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in do_batch(self, b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+    126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+--&gt; 127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+    129     def one_batch(self):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batch(self, b)
+    124     def retain(self, res, b):  return retain_types(res, b[0] if is_listy(b) else b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+--&gt; 126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+    127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in &lt;listcomp&gt;(.0)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+     46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+---&gt; 47             else default_collate(t))
+     48 
+     49 # Cell
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py in default_collate(batch)
+     79         return [default_collate(samples) for samples in transposed]
+     80 
+---&gt; 81     raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+TypeError: default_collate: batch must contain tensors, numpy arrays, numbers, dicts or lists; found &lt;class 'pathlib.PosixPath'&gt;
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">next</span><span class="p">(</span><span class="n">it1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(TensorImage([[[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]]], dtype=torch.uint8),
+ ('7', '3', '7', '3'))
+</code></pre></div></div>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">next</span><span class="p">(</span><span class="n">it2</span><span class="p">)</span>
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>---------------------------------------------------------------------------
+
+TypeError                                 Traceback (most recent call last)
+
+&lt;ipython-input-69-58c7b9b7f185&gt; in &lt;module&gt;
+----&gt; 1 next(it2)
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in __iter__(self)
+     95         self.randomize()
+     96         self.before_iter()
+---&gt; 97         for b in _loaders[self.fake_l.num_workers==0](self.fake_l):
+     98             if self.device is not None: b = to_device(b, self.device)
+     99             yield self.after_batch(b)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in __next__(self)
+    343 
+    344     def __next__(self):
+--&gt; 345         data = self._next_data()
+    346         self._num_yielded += 1
+    347         if self._dataset_kind == _DatasetKind.Iterable and \
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in _next_data(self)
+    383     def _next_data(self):
+    384         index = self._next_index()  # may raise StopIteration
+--&gt; 385         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+    386         if self._pin_memory:
+    387             data = _utils.pin_memory.pin_memory(data)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py in fetch(self, possibly_batched_index)
+     32                 raise StopIteration
+     33         else:
+---&gt; 34             data = next(self.dataset_iter)
+     35         return self.collate_fn(data)
+     36 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batches(self, samps)
+    104         self.it = iter(self.dataset) if self.dataset is not None else None
+    105         res = filter(lambda o:o is not None, map(self.do_item, samps))
+--&gt; 106         yield from map(self.do_batch, self.chunkify(res))
+    107 
+    108     def new(self, dataset=None, cls=None, **kwargs):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in do_batch(self, b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+    126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+--&gt; 127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+    129     def one_batch(self):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batch(self, b)
+    124     def retain(self, res, b):  return retain_types(res, b[0] if is_listy(b) else b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+--&gt; 126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+    127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in &lt;listcomp&gt;(.0)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+     46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+---&gt; 47             else default_collate(t))
+     48 
+     49 # Cell
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py in default_collate(batch)
+     79         return [default_collate(samples) for samples in transposed]
+     80 
+---&gt; 81     raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+TypeError: default_collate: batch must contain tensors, numpy arrays, numbers, dicts or lists; found &lt;class 'pathlib.PosixPath'&gt;
+</code></pre></div></div>
+
+<h1 id="a-very-short-summary">
+<a class="anchor" href="#a-very-short-summary" aria-hidden="true"><span class="octicon octicon-link"></span></a>A very short summary:</h1>
+
+<ol>
+  <li>Each <code class="highlighter-rouge">TfmdLists</code> (and the <code class="highlighter-rouge">Pipeline</code> inside it) in a <code class="highlighter-rouge">Datasets</code> object gets assigned appropriate <code class="highlighter-rouge">split_idx</code> values depending on what split of your data it is meant for.</li>
+  <li>You can assign a <code class="highlighter-rouge">split_idx</code> attribute to your <code class="highlighter-rouge">Transform</code> to specify what subsets of your dataset it will operate on.</li>
+</ol>
+
+<p>If you look at the source code of <code class="highlighter-rouge">TfmdDL</code> and see what gets called just before we get our actual dataloader which is going to be used for the model, you’ll see that it ends up overriding the <code class="highlighter-rouge">split_idx</code> of all these <code class="highlighter-rouge">Pipeline</code>s: <code class="highlighter-rouge">after_item</code>,<code class="highlighter-rouge">before_batch</code>,<code class="highlighter-rouge">after_batch</code>:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># _batch_tfms = ('after_item','before_batch','after_batch')
+</span><span class="k">def</span> <span class="nf">before_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">before_iter</span><span class="p">()</span>
+        <span class="n">split_idx</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="s">'split_idx'</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">nm</span> <span class="ow">in</span> <span class="n">_batch_tfms</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">nm</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="n">Pipeline</span><span class="p">):</span> <span class="n">f</span><span class="o">.</span><span class="n">split_idx</span><span class="o">=</span><span class="n">split_idx</span>
+</code></pre></div></div>
+
+<p>I was initially confused as to why it would override any existing <code class="highlighter-rouge">split_idx</code> values for the pipelines. But in the context of what we just discuseed, my understanding is that doing this merely sets a <em>context</em> for the <code class="highlighter-rouge">Transforms</code> to operate in. Meaning that each <code class="highlighter-rouge">Transform</code> in the pipeline would know exactly what subset of the data it is working on when it gets the items, and if the <code class="highlighter-rouge">Transform</code> has a specific <code class="highlighter-rouge">split_idx</code> set already, it will only operate in the context where there’s an exact match of the <code class="highlighter-rouge">split_idx</code> values.<br></p>
+
+<p>Please leave a comment if you thought this helped you!</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+</code></pre></div></div>
+
+  </div><!-- from https://github.com/utterance/utterances -->
+<script src="https://utteranc.es/client.js"
+        repo="akashpalrecha/blog"
+        issue-term="title"
+        label="blogpost-comment"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script><a class="u-url" href="/tutorials/blog/2020/03/28/split-transform.html" hidden></a>
+</article>
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+      </div>
+      <div class="footer-col">
+        <p>Pixxel | BITS Pilani</p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"><li><a rel="me" href="https://github.com/akashpalrecha" title="akashpalrecha"><svg class="svg-icon grey"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg></a></li><li><a rel="me" href="https://twitter.com/akashpalrecha98" title="akashpalrecha98"><svg class="svg-icon grey"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg></a></li></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

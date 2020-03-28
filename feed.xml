@@ -1,4 +1,669 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="https://akashpalrecha.me/feed.xml" rel="self" type="application/atom+xml" /><link href="https://akashpalrecha.me/" rel="alternate" type="text/html" /><updated>2020-03-28T15:08:27-05:00</updated><id>https://akashpalrecha.me/feed.xml</id><title type="html">Akash Palrecha</title><subtitle>Pixxel | BITS Pilani</subtitle><entry><title type="html">How slow is Python really?</title><link href="https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really.html" rel="alternate" type="text/html" title="How slow is Python really?" /><published>2020-02-07T00:00:00-06:00</published><updated>2020-02-07T00:00:00-06:00</updated><id>https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really</id><content type="html" xml:base="https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really.html">&lt;p&gt;This is a very short post that compares plain &lt;code class=&quot;highlighter-rouge&quot;&gt;python&lt;/code&gt; loops to &lt;code class=&quot;highlighter-rouge&quot;&gt;C&lt;/code&gt; loops (sort of). We will write python code, compile it using the &lt;a href=&quot;https://numba.pydata.org&quot;&gt;Numba&lt;/a&gt; library and see the difference in both the implementations (interpreted vs compiled). &lt;br /&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="https://akashpalrecha.me/feed.xml" rel="self" type="application/atom+xml" /><link href="https://akashpalrecha.me/" rel="alternate" type="text/html" /><updated>2020-03-28T15:16:40-05:00</updated><id>https://akashpalrecha.me/feed.xml</id><title type="html">Akash Palrecha</title><subtitle>Pixxel | BITS Pilani</subtitle><entry><title type="html">Using different Transforms for train and validation sets in fastai2</title><link href="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html" rel="alternate" type="text/html" title="Using different Transforms for train and validation sets in fastai2" /><published>2020-03-28T00:00:00-05:00</published><updated>2020-03-28T00:00:00-05:00</updated><id>https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform</id><content type="html" xml:base="https://akashpalrecha.me/tutorials/blog/2020/03/28/split-transform.html">&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;%&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;config&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;autocompleter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;use_jedi&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;False&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;fastai2&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;fastai2.data.all&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;
+&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;fastai2.vision.all&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;applying-a-transform-to-specific-subsets-of-your-dataset-using-fastai2s-low-level-apis&quot;&gt;Applying a &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; to specific subsets of your Dataset using &lt;code class=&quot;highlighter-rouge&quot;&gt;fastai2&lt;/code&gt;’s low level APIs&lt;/h1&gt;
+
+&lt;h2 id=&quot;preliminaries&quot;&gt;Preliminaries:&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;What we will be discussing:&lt;/strong&gt; We’ll learn one very specific thing about the fastai2 library: how to restrict some transforms to work only on specific subsets of your data. For example, you may want a particular image augmentation to only run on your training data and not your validation data.&lt;br /&gt;
+&lt;strong&gt;What we are not going to do:&lt;/strong&gt; We are not going to look at the source code in this blog and understand how to achieve the above objective. I’ve done all that homework so you don’t have to, and we’ll simply be looking into how we can write code to achieve this. Along the way, we’ll get some insights on why things work the way they do. I believe that digging through the source code is a great exercise in itself and I encourage you to do the same to get to the core of what we will discuss today&lt;br /&gt;
+&lt;strong&gt;What knowledge is assumed of the reader:&lt;/strong&gt; This blog is meant for users who have some familiarity with how to use the &lt;code class=&quot;highlighter-rouge&quot;&gt;Datasets&lt;/code&gt; functionality (and it’s relatives) in &lt;code class=&quot;highlighter-rouge&quot;&gt;fastai2&lt;/code&gt;. Usually, these readers will be fairly comfortable at a high level with the &lt;code class=&quot;highlighter-rouge&quot;&gt;fastai2&lt;/code&gt; library although it isn’t required. To get the necessary background, I recommend you to work through the first of the FastAI V2 walkthroughs that Jeremy Howard posted a few months ago here: &lt;a href=&quot;https://www.youtube.com/watch?v=44pe47sB4BI&quot;&gt;Video&lt;/a&gt;. Some of the names of components in the library have changed since then, most notably:&lt;br /&gt;&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;DataSource -&amp;gt; Datasets&lt;/li&gt;
+  &lt;li&gt;Databunch -&amp;gt; Dataloaders&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;From this point onwards, I will be assuming that you have the necessary prerequisites to follow through this blog. I encourage you to spin up a Jupyter notebook and run all the code below.&lt;/p&gt;
+
+&lt;h1 id=&quot;lets-begin&quot;&gt;Let’s begin!&lt;/h1&gt;
+
+&lt;p&gt;First, we need to get some items ready to work on …&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;untar_data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;URLs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;MNIST_SAMPLE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Dataset consisting of MNIST Images of classes `3` and `7`
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_image_files&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;((#10) [Path('/Users/akash/.fastai/data/mnist_sample/train/3/10847.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/49926.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/25630.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/23241.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/24248.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/54977.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/23527.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/48386.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/28472.png'),Path('/Users/akash/.fastai/data/mnist_sample/train/3/27741.png')],
+ (#10) [Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9294.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/1186.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6825.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/4767.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6170.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6164.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9257.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/4773.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/8175.png'),Path('/Users/akash/.fastai/data/mnist_sample/valid/7/6158.png')])
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We’ll begin by defining define some transforms for our data&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Transform&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;imopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;o&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PILImage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;o&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Simply creates an Image.Image from a Path
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;img_tfms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;imopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ToTensor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Open image, convert to tensor
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cat_tfms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent_label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Label each image using the parent folder name of it's path
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splitter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;RandomSplitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Splits items randomly into train and validation set
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;splitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Get split indices
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;((#11548) [10633,2570,13625,8068,1511,12874,1824,14429,10383,5628...],
+ (#2886) [11197,954,6177,4220,2384,13223,5007,12005,11552,11120...])
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;So, here we define a &lt;code class=&quot;highlighter-rouge&quot;&gt;Datasets&lt;/code&gt; object in the usual way, passing in the items and the transforms for each component of our data. We pass in &lt;code class=&quot;highlighter-rouge&quot;&gt;splits&lt;/code&gt; to specify the split between training and validation sets. Or rather to be more specific, we do this to specify the &lt;code class=&quot;highlighter-rouge&quot;&gt;subset(0)&lt;/code&gt; and the &lt;code class=&quot;highlighter-rouge&quot;&gt;subset(1)&lt;/code&gt; of our dataset.&lt;/p&gt;
+
+&lt;p&gt;What does component above mean: Let’s say each training sample of your data is of the form: (Image, label). In this case, &lt;code class=&quot;highlighter-rouge&quot;&gt;Image&lt;/code&gt; is your first component, and &lt;code class=&quot;highlighter-rouge&quot;&gt;label&lt;/code&gt; is your second component.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Datasets&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;img_tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cat_tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Sanity checks:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# The above is the same as: ds[0], ds.subset(0)[0], ds.subset(1)[0]
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;((TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '7'),
+ (TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '3'),
+ (TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+  
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+  '3'))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now let’s say, hypothetically, that we want to apply our &lt;code class=&quot;highlighter-rouge&quot;&gt;imopen&lt;/code&gt; transform only to items in the &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.train&lt;/code&gt; dataset. We’ll investigate how we might go about achieving that.&lt;/p&gt;
+
+&lt;p&gt;So, in &lt;code class=&quot;highlighter-rouge&quot;&gt;fastai2&lt;/code&gt;, every split of your dataset is linked to a &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt;. In the above example, the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; for &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.train&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.valid&lt;/code&gt; is &lt;code class=&quot;highlighter-rouge&quot;&gt;0&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;1&lt;/code&gt; respectively. So, &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; is essentially the &lt;em&gt;index&lt;/em&gt; of a split in the Dataset.&lt;/p&gt;
+
+&lt;p&gt;In &lt;code class=&quot;highlighter-rouge&quot;&gt;fastai2&lt;/code&gt;, each Pipeline that is assigned to a split of your data has a matching &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt;. For example, here are the values for our train and validation sets in &lt;code class=&quot;highlighter-rouge&quot;&gt;ds&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;Note: &lt;code class=&quot;highlighter-rouge&quot;&gt;tls[0]&lt;/code&gt; is the Pipeline for opening our image and &lt;code class=&quot;highlighter-rouge&quot;&gt;tls[1]&lt;/code&gt; is the Pipeline for setting our labels.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(0, 0)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(1, 1)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# For completeness' sake: each ds.tls itself has splits inside of it.
+# We can confirm this:
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;assert&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# I prefer using ds.train.tls[0] because I believe it makes things a bit more readable
+# and so that's what we'll be using throughout the rest of the blog.
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As you can see, the Pipelines are automatically assigned the appropriate &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt;s depending on what subsets of your data they’re meant for.&lt;br /&gt;
+Now, each &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; can have a &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; too. But how does that help?&lt;br /&gt;
+If a &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; has a split_idx of &lt;code class=&quot;highlighter-rouge&quot;&gt;0&lt;/code&gt;, it will only be active if it’s inside a Pipeline which also has a &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; of &lt;code class=&quot;highlighter-rouge&quot;&gt;0&lt;/code&gt;. So basically, the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt;s of the Pipeline and a transform inside it need to match if the transform is to be active, otherwise, it will just pass on the input without doing any operation on it. One thing to note here is that if a &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; does not have a &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; (i.e. &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx = None&lt;/code&gt;), it will be applied to all the inputs it gets regardless of the Pipeline’s &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;The code examples ahead will help clarify this a bit more.&lt;br /&gt;
+We’ll redefine everything with a few changes&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Transform&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;imopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;o&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Path&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PILImage&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;o&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;imopen&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Now, we should expect this to work only for the training set
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;img_tfms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;imopen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ToTensor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Open image, convert to tensor
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cat_tfms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent_label&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Label each image using the parent folder name of it's path
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splitter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;RandomSplitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Splits items randomly into train and validation set
+&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;splitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;# Get split indices
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Datasets&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;items&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;img_tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cat_tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;splits&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;So, at this point, we have three datasets in &lt;code class=&quot;highlighter-rouge&quot;&gt;ds&lt;/code&gt;:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;ds&lt;/code&gt; : the full dataset&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;ds.train&lt;/code&gt; : the first split, i.e. &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.subset(0)&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;ds.valid&lt;/code&gt; : the second split, i.e. &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.subset(1)&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;And for all these datasets, a separate set of &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipelines&lt;/code&gt; (or rather specifically, &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt;) has been created using the same transforms we passed above. Let’s verify that: &lt;br /&gt;
+(we should expect each &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdList&lt;/code&gt; to have two Pipelines for two of our components)&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(2, 2, 2)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Looking at each Pipeline in the &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(Pipeline: imopen -&amp;gt; ToTensor, Pipeline: parent_label)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now, here are the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values for all of them:&lt;/p&gt;
+
+&lt;p&gt;Note: &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; for &lt;code class=&quot;highlighter-rouge&quot;&gt;ds&lt;/code&gt; itself is what we passed in when we created the &lt;code class=&quot;highlighter-rouge&quot;&gt;Datasets&lt;/code&gt; object&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(2, 0, 1)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; for each &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt; and for the &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipeline&lt;/code&gt;s contained in them for all our datasets:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; 
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;2 2
+2 2
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;0 0
+0 0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tfms&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;1 1
+1 1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As we can see, all of the &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipeline&lt;/code&gt;s above have been assigned the appropriate &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values depending on what dataset they belong to. This is as expected&lt;/p&gt;
+
+&lt;p&gt;Here’s the interesting bit: we’ll now look at the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values of the &lt;code class=&quot;highlighter-rouge&quot;&gt;imopen&lt;/code&gt; function in each of these &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(imopen: (Path,object) -&amp;gt; imopen , 0)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(imopen: (Path,object) -&amp;gt; imopen , 0)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tls&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(imopen: (Path,object) -&amp;gt; imopen , 0)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;So, regardless of what &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipeline&lt;/code&gt; it belongs to, the &lt;code class=&quot;highlighter-rouge&quot;&gt;imopen&lt;/code&gt; function has retained it’s &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; value. Now let’s see how it affects things going ahead. We should expect &lt;code class=&quot;highlighter-rouge&quot;&gt;imopen&lt;/code&gt; to work only for our train dataset.&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(Path('/Users/akash/.fastai/data/mnist_sample/valid/7/9294.png'), '7')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(TensorImage([[[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]],
+ 
+         [[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]],
+ 
+         [[0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          ...,
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0],
+          [0, 0, 0,  ..., 0, 0, 0]]], dtype=torch.uint8),
+ '7')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(Path('/Users/akash/.fastai/data/mnist_sample/train/7/10408.png'), '7')
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;So the code above just confirms everything we just discussed.&lt;/p&gt;
+
+&lt;p&gt;Now, if we put everything into a &lt;code class=&quot;highlighter-rouge&quot;&gt;Dataloader&lt;/code&gt;, we’ll get the expected errors where items from &lt;code class=&quot;highlighter-rouge&quot;&gt;ds&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;ds.valid&lt;/code&gt; will casuse issues when being put into a batch of tensors since you can’t do that with &lt;code class=&quot;highlighter-rouge&quot;&gt;Path&lt;/code&gt; objects:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;dl0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DataLoader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dataset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;dl1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DataLoader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dataset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;train&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;dl2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DataLoader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dataset&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ds&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;valid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;dl0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dl1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dl2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(2, 0, 1)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;it0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;it1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;it2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;iter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dl0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;iter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dl1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;iter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dl2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;it0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---------------------------------------------------------------------------
+
+TypeError                                 Traceback (most recent call last)
+
+&amp;lt;ipython-input-67-6a3290243c2c&amp;gt; in &amp;lt;module&amp;gt;
+----&amp;gt; 1 next(it0)
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in __iter__(self)
+     95         self.randomize()
+     96         self.before_iter()
+---&amp;gt; 97         for b in _loaders[self.fake_l.num_workers==0](self.fake_l):
+     98             if self.device is not None: b = to_device(b, self.device)
+     99             yield self.after_batch(b)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in __next__(self)
+    343 
+    344     def __next__(self):
+--&amp;gt; 345         data = self._next_data()
+    346         self._num_yielded += 1
+    347         if self._dataset_kind == _DatasetKind.Iterable and \
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in _next_data(self)
+    383     def _next_data(self):
+    384         index = self._next_index()  # may raise StopIteration
+--&amp;gt; 385         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+    386         if self._pin_memory:
+    387             data = _utils.pin_memory.pin_memory(data)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py in fetch(self, possibly_batched_index)
+     32                 raise StopIteration
+     33         else:
+---&amp;gt; 34             data = next(self.dataset_iter)
+     35         return self.collate_fn(data)
+     36 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batches(self, samps)
+    104         self.it = iter(self.dataset) if self.dataset is not None else None
+    105         res = filter(lambda o:o is not None, map(self.do_item, samps))
+--&amp;gt; 106         yield from map(self.do_batch, self.chunkify(res))
+    107 
+    108     def new(self, dataset=None, cls=None, **kwargs):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in do_batch(self, b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+    126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+--&amp;gt; 127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+    129     def one_batch(self):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batch(self, b)
+    124     def retain(self, res, b):  return retain_types(res, b[0] if is_listy(b) else b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+--&amp;gt; 126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+    127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&amp;gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in &amp;lt;listcomp&amp;gt;(.0)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&amp;gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+     46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+---&amp;gt; 47             else default_collate(t))
+     48 
+     49 # Cell
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py in default_collate(batch)
+     79         return [default_collate(samples) for samples in transposed]
+     80 
+---&amp;gt; 81     raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+TypeError: default_collate: batch must contain tensors, numpy arrays, numbers, dicts or lists; found &amp;lt;class 'pathlib.PosixPath'&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;it1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(TensorImage([[[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]],
+ 
+ 
+         [[[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]],
+ 
+          [[0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           ...,
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0],
+           [0, 0, 0,  ..., 0, 0, 0]]]], dtype=torch.uint8),
+ ('7', '3', '7', '3'))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;it2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;---------------------------------------------------------------------------
+
+TypeError                                 Traceback (most recent call last)
+
+&amp;lt;ipython-input-69-58c7b9b7f185&amp;gt; in &amp;lt;module&amp;gt;
+----&amp;gt; 1 next(it2)
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in __iter__(self)
+     95         self.randomize()
+     96         self.before_iter()
+---&amp;gt; 97         for b in _loaders[self.fake_l.num_workers==0](self.fake_l):
+     98             if self.device is not None: b = to_device(b, self.device)
+     99             yield self.after_batch(b)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in __next__(self)
+    343 
+    344     def __next__(self):
+--&amp;gt; 345         data = self._next_data()
+    346         self._num_yielded += 1
+    347         if self._dataset_kind == _DatasetKind.Iterable and \
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/dataloader.py in _next_data(self)
+    383     def _next_data(self):
+    384         index = self._next_index()  # may raise StopIteration
+--&amp;gt; 385         data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
+    386         if self._pin_memory:
+    387             data = _utils.pin_memory.pin_memory(data)
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/fetch.py in fetch(self, possibly_batched_index)
+     32                 raise StopIteration
+     33         else:
+---&amp;gt; 34             data = next(self.dataset_iter)
+     35         return self.collate_fn(data)
+     36 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batches(self, samps)
+    104         self.it = iter(self.dataset) if self.dataset is not None else None
+    105         res = filter(lambda o:o is not None, map(self.do_item, samps))
+--&amp;gt; 106         yield from map(self.do_batch, self.chunkify(res))
+    107 
+    108     def new(self, dataset=None, cls=None, **kwargs):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in do_batch(self, b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+    126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+--&amp;gt; 127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+    129     def one_batch(self):
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in create_batch(self, b)
+    124     def retain(self, res, b):  return retain_types(res, b[0] if is_listy(b) else b)
+    125     def create_item(self, s):  return next(self.it) if s is None else self.dataset[s]
+--&amp;gt; 126     def create_batch(self, b): return (fa_collate,fa_convert)[self.prebatched](b)
+    127     def do_batch(self, b): return self.retain(self.create_batch(self.before_batch(b)), b)
+    128     def to(self, device): self.device = device
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&amp;gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in &amp;lt;listcomp&amp;gt;(.0)
+     44     b = t[0]
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+---&amp;gt; 46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+     47             else default_collate(t))
+     48 
+
+
+~/Google Drive/Programming/Deep learning/Learn DL/FASTAI/FASTAI2/fastai2/fastai2/data/load.py in fa_collate(t)
+     45     return (default_collate(t) if isinstance(b, _collate_types)
+     46             else type(t[0])([fa_collate(s) for s in zip(*t)]) if isinstance(b, Sequence)
+---&amp;gt; 47             else default_collate(t))
+     48 
+     49 # Cell
+
+
+~/anaconda3/envs/fastai2/lib/python3.7/site-packages/torch/utils/data/_utils/collate.py in default_collate(batch)
+     79         return [default_collate(samples) for samples in transposed]
+     80 
+---&amp;gt; 81     raise TypeError(default_collate_err_msg_format.format(elem_type))
+
+
+TypeError: default_collate: batch must contain tensors, numpy arrays, numbers, dicts or lists; found &amp;lt;class 'pathlib.PosixPath'&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;a-very-short-summary&quot;&gt;A very short summary:&lt;/h1&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Each &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdLists&lt;/code&gt; (and the &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipeline&lt;/code&gt; inside it) in a &lt;code class=&quot;highlighter-rouge&quot;&gt;Datasets&lt;/code&gt; object gets assigned appropriate &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values depending on what split of your data it is meant for.&lt;/li&gt;
+  &lt;li&gt;You can assign a &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; attribute to your &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; to specify what subsets of your dataset it will operate on.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;If you look at the source code of &lt;code class=&quot;highlighter-rouge&quot;&gt;TfmdDL&lt;/code&gt; and see what gets called just before we get our actual dataloader which is going to be used for the model, you’ll see that it ends up overriding the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; of all these &lt;code class=&quot;highlighter-rouge&quot;&gt;Pipeline&lt;/code&gt;s: &lt;code class=&quot;highlighter-rouge&quot;&gt;after_item&lt;/code&gt;,&lt;code class=&quot;highlighter-rouge&quot;&gt;before_batch&lt;/code&gt;,&lt;code class=&quot;highlighter-rouge&quot;&gt;after_batch&lt;/code&gt;:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# _batch_tfms = ('after_item','before_batch','after_batch')
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;before_iter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt;
+        &lt;span class=&quot;nb&quot;&gt;super&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;before_iter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;getattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;dataset&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'split_idx'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;bp&quot;&gt;None&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nm&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;_batch_tfms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;getattr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bp&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nm&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;isinstance&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Pipeline&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;):&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;f&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;split_idx&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I was initially confused as to why it would override any existing &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values for the pipelines. But in the context of what we just discuseed, my understanding is that doing this merely sets a &lt;em&gt;context&lt;/em&gt; for the &lt;code class=&quot;highlighter-rouge&quot;&gt;Transforms&lt;/code&gt; to operate in. Meaning that each &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; in the pipeline would know exactly what subset of the data it is working on when it gets the items, and if the &lt;code class=&quot;highlighter-rouge&quot;&gt;Transform&lt;/code&gt; has a specific &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; set already, it will only operate in the context where there’s an exact match of the &lt;code class=&quot;highlighter-rouge&quot;&gt;split_idx&lt;/code&gt; values.&lt;br /&gt;&lt;/p&gt;
+
+&lt;p&gt;Please leave a comment if you thought this helped you!&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name></name></author><category term="blog" /><summary type="html">%config autocompleter.use_jedi = False</summary></entry><entry><title type="html">How slow is Python really?</title><link href="https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really.html" rel="alternate" type="text/html" title="How slow is Python really?" /><published>2020-02-07T00:00:00-06:00</published><updated>2020-02-07T00:00:00-06:00</updated><id>https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really</id><content type="html" xml:base="https://akashpalrecha.me/general/2020/02/07/how-slow-is-python-really.html">&lt;p&gt;This is a very short post that compares plain &lt;code class=&quot;highlighter-rouge&quot;&gt;python&lt;/code&gt; loops to &lt;code class=&quot;highlighter-rouge&quot;&gt;C&lt;/code&gt; loops (sort of). We will write python code, compile it using the &lt;a href=&quot;https://numba.pydata.org&quot;&gt;Numba&lt;/a&gt; library and see the difference in both the implementations (interpreted vs compiled). &lt;br /&gt;
 I will not focus on writing elaborate explanations, but rather just the bits of code that we will need to show the difference.&lt;/p&gt;
 
 &lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;numba&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;jit&lt;/span&gt;
